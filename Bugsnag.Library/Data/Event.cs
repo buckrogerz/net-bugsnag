@@ -26,33 +26,21 @@ namespace Bugsnag.Library.Data
         /// This field is optional but highly recommended.
         /// </summary>
         [DataMember(Name = "userId")]
-        public string UserId
-        {
-            get;
-            set;
-        }
+        public string UserId{get;set;}
 
         /// <summary>
         /// The version number of the application which generated the error.
         /// (optional, default none)
         /// </summary>
         [DataMember(Name = "appVersion")]
-        public string AppVersion
-        {
-            get;
-            set;
-        }
+        public string AppVersion{get;set;}
 
         /// <summary>
         /// The operating system version of the client that the error was 
         /// generated on. (optional, default none)
         /// </summary>
         [DataMember(Name = "osVersion")]
-        public string OSVersion
-        {
-            get;
-            set;
-        }
+        public string OSVersion{get;set;}
 
         /// <summary>
         /// The release stage that this error occurred in, for example 
@@ -61,11 +49,7 @@ namespace Bugsnag.Library.Data
         /// "production" appropriately.
         /// </summary>
         [DataMember(Name = "releaseStage")]
-        public string ReleaseStage
-        {
-            get;
-            set;
-        }
+        public string ReleaseStage{get;set;}
 
         /// <summary>
         /// A string representing what was happening in the application at the 
@@ -80,11 +64,7 @@ namespace Bugsnag.Library.Data
         ///   * In iOS, the context could be the name of the top most UIViewController
         /// </summary>
         [DataMember(Name = "context")]
-        public string Context
-        {
-            get;
-            set;
-        }
+        public string Context{get;set;}
 
         /// <summary>
         /// An array of exceptions that occurred during this event. Most of the
@@ -94,11 +74,7 @@ namespace Bugsnag.Library.Data
         /// raised should be first in this array.
         /// </summary>
         [DataMember(Name = "exceptions")]
-        public List<Exception> Exceptions
-        {
-            get;
-            set;
-        }
+        public List<Exception> Exceptions{get;set;}
 
         /// <summary>
         /// An object containing any further data you wish to attach to this error
@@ -107,10 +83,6 @@ namespace Bugsnag.Library.Data
         /// (Optional).
         /// </summary>
         [DataMember(Name = "metaData")]
-        public object ExtraData
-        {
-            get;
-            set;
-        }
+        public object ExtraData{get;set;}
     }
 }

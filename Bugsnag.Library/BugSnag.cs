@@ -17,6 +17,8 @@ namespace Bugsnag.Library
     /// </summary>
     public class BugSnag
     {
+        #region Local Vars
+
         /// <summary>
         /// Http based url for reporting errors to BugSnag
         /// </summary>
@@ -27,13 +29,17 @@ namespace Bugsnag.Library
         /// </summary>
         private string httpsUrl = "https://notify.bugsnag.com";
 
+        #endregion Local Vars
+
+        #region Constructors
+
         /// <summary>
         /// Creates a bugsnag notifier and sets the API key
         /// </summary>
         /// <param name="apiKey"></param>
         public BugSnag(string apiKey) : this()
         {
-            this.apiKey = apiKey;
+            this.APIKey = apiKey;
         }
 
         /// <summary>
@@ -41,126 +47,57 @@ namespace Bugsnag.Library
         /// </summary>
         public BugSnag()
         {
-            //  SSL is set to 'off' by default
-            useSSL = false;
-
-            //  Release stage defaults to 'production'
-            releaseStage = "production";
-
-            //  Notify release stages defaults to just notifying 
-            //  for production
-            notifyReleaseStages = new List<string>();
-            notifyReleaseStages.Add("production");
-
-            //  CHECK CONFIGURATION SETTINGS
-
-            //  apiKey
-            if(!string.IsNullOrEmpty(ConfigurationManager.AppSettings["BugSnagApiKey"]))
-            {
-                apiKey = ConfigurationManager.AppSettings["BugSnagApiKey"];
-            }
-
-            //  SSL
-            if(!string.IsNullOrEmpty(ConfigurationManager.AppSettings["BugSnagUseSSL"]))
-            {
-                useSSL = Convert.ToBoolean(ConfigurationManager.AppSettings["BugSnagUseSSL"]);
-            }
-
-            //  Release stage
-            if(!string.IsNullOrEmpty(ConfigurationManager.AppSettings["BugSnagReleaseStage"]))
-            {
-                releaseStage = ConfigurationManager.AppSettings["BugSnagReleaseStage"];
-            }
-
-            //  Notify release stages
-            if(!string.IsNullOrEmpty(ConfigurationManager.AppSettings["BugSnagNotifyReleaseStages"]))
-            {
-                notifyReleaseStages.Clear();
-                notifyReleaseStages.AddRange(ConfigurationManager.AppSettings["BugSnagNotifyReleaseStages"].Split('|'));
-            }
-
-            //  Application version
-            if(!string.IsNullOrEmpty(ConfigurationManager.AppSettings["applicationVersion"]))
-            {
-                applicationVersion = ConfigurationManager.AppSettings["applicationVersion"];
-            }
+            CommonInit();
         }
+
+        #endregion Constructors
+
+        #region Properties
 
         /// <summary>
         /// The apiKey for the project
         /// </summary>
-        public string apiKey
-        {
-            get;
-            set;
-        }
+        public string APIKey{get;set;}
 
         /// <summary>
         /// The current release stage for the application 
         /// (development/test/production)
         /// </summary>
-        public string releaseStage
-        {
-            get;
-            set;
-        }
+        public string ReleaseStage{get;set;}
 
         /// <summary>
         /// A list of release stages that the notifier will capture and send 
         /// errors for. If the current release stage is not in this list, errors 
         /// should not be sent to Bugsnag. 
         /// </summary>
-        public List<string> notifyReleaseStages
-        {
-            get;
-            set;
-        }
+        public List<string> NotifyReleaseStages{get;set;}
 
         /// <summary>
         /// If this is true, the plugin should notify Bugsnag using SSL
         /// </summary>
-        public bool useSSL
-        {
-            get;
-            set;
-        }
+        public bool UseSSL{get;set;}
 
         /// <summary>
         /// The version number of the application which generated the error
         /// </summary>
-        public string applicationVersion
-        {
-            get;
-            set;
-        }
+        public string ApplicationVersion{get;set;}
 
         /// <summary>
         /// The operating system version of the client that the error was 
         /// generated on.
         /// </summary>
-        public string OSVersion
-        {
-            get;
-            set;
-        }
+        public string OSVersion{get;set;}
 
-        /// <summary>
-        /// Gathers information for the last error (if any error is available) 
-        /// and reports it to BugSnag using information from the application
-        /// configuration file and other defaults
-        /// </summary>
-        public void Notify()
-        {
-            Notify(null);
-        }
+        #endregion Properties
 
+        #region public methods
         /// <summary>
         /// Gathers information for the last error (if any error is available) 
         /// and reports it to BugSnag using information from the application
         /// configuration file and other defaults
         /// </summary>
         /// <param name="extraData">Any extra data to pass when reporting this error</param>
-        public void Notify(object extraData)
+        public void Notify(object extraData= null)
         {
             //  If we're a web application, we can report errors automagically
             if(HttpContext.Current != null)
@@ -180,11 +117,11 @@ namespace Bugsnag.Library
                     //  Send the notification:
                     ErrorNotification notification = new ErrorNotification()
                     {
-                        Api_Key = this.apiKey,
+                        Api_Key = this.APIKey,
                         Events = events
                     };
 
-                    SendNotification(notification, this.useSSL);
+                    SendNotification(notification, this.UseSSL);
                 }
             }
 
@@ -196,7 +133,7 @@ namespace Bugsnag.Library
         /// </summary>
         /// <param name="ex">The exception to report</param>
         /// <param name="extraData">Data that will be sent as meta-data along with this error</param>
-        public void Notify(System.Exception ex, object extraData) 
+        public void Notify(System.Exception ex, object extraData=null) 
         {
             Notify(ex, string.Empty, string.Empty, extraData);
         }
@@ -206,7 +143,7 @@ namespace Bugsnag.Library
         /// </summary>
         /// <param name="exList">The list of Exceptions to report</param>
         /// <param name="extraData">Data that will be sent as meta-data along with this error</param>
-        public void Notify(List<System.Exception> exList, object extraData)
+        public void Notify(List<System.Exception> exList, object extraData=null)
         {
             Notify(exList, string.Empty, string.Empty, extraData);
         }
@@ -219,7 +156,7 @@ namespace Bugsnag.Library
         /// this defaults to sessionId if available</param>
         /// <param name="context">The context that is currently active in the application</param>
         /// <param name="extraData">Data that will be sent as meta-data along with this error</param>
-        public void Notify(System.Exception ex, string userId, string context, object extraData)
+        public void Notify(System.Exception ex, string userId, string context, object extraData=null)
         {
             List<System.Exception> exList = new List<System.Exception>();
             exList.Add(ex);
@@ -235,7 +172,7 @@ namespace Bugsnag.Library
         /// this defaults to sessionId if available</param>
         /// <param name="context">The context that is currently active in the application</param>
         /// <param name="extraData">Data that will be sent as meta-data along with every error</param>
-        public void Notify(List<System.Exception> exList, string userId, string context, object extraData)
+        public void Notify(List<System.Exception> exList, string userId, string context, object extraData=null)
         {
             //  Add an event for this exception list:
             List<Event> events = new List<Event>();
@@ -244,20 +181,22 @@ namespace Bugsnag.Library
             //  Send the notification:
             ErrorNotification notification = new ErrorNotification()
             {
-                Api_Key = this.apiKey,
+                Api_Key = this.APIKey,
                 Events = events
             };
 
-            SendNotification(notification, this.useSSL);
+            SendNotification(notification, this.UseSSL);
         }
+        #endregion public methods
 
+        #region private methods
         /// <summary>
         /// Gets the default UserId to use when reporting errors
         /// </summary>
         /// <returns></returns>
         private string GetDefaultUserId()
         {
-            string retval = string.Empty;
+            string retval = "No UserId Found";
 
             //  First, check to see if we have an HttpContext to work with
             if(HttpContext.Current != null)
@@ -291,10 +230,10 @@ namespace Bugsnag.Library
             //  Create an event to return
             Event retval = new Event()
             {
-                AppVersion = this.applicationVersion,
+                AppVersion = this.ApplicationVersion,
                 Context = Context,
                 OSVersion = this.OSVersion,
-                ReleaseStage = this.releaseStage,
+                ReleaseStage = this.ReleaseStage,
                 UserId = UserId,
                 ExtraData = extraData
             };
@@ -305,17 +244,30 @@ namespace Bugsnag.Library
             //  For each exception passed...
             foreach(System.Exception ex in exList)
             {
+                List<Stacktrace> stacktraces = null;
                 //  ... Create a list of stacktraces
                 //  This may not be the best way to get this information:
                 //  http://blogs.msdn.com/b/jmstall/archive/2005/03/20/399287.aspx
-                var stacktraces = (from item in new System.Diagnostics.StackTrace(ex, true).GetFrames()
+                if (ex.StackTrace != null && ex.StackTrace != string.Empty)
+                {
+                    stacktraces = (from item in new System.Diagnostics.StackTrace(ex, true).GetFrames()
                                    select new Stacktrace()
                                    {
                                        File = item.GetFileName() ?? item.GetType().Name ?? "N/A",
                                        LineNumber = item.GetFileLineNumber(),
                                        Method = item.GetMethod().Name
                                    }).ToList();
-
+                }
+                else
+                {
+                    stacktraces = new List<Stacktrace>();
+                    stacktraces.Add(new Stacktrace
+                    {
+                        File = "No file available",
+                        LineNumber = 0,
+                        Method = "No stack trace information available"
+                    });
+                }
                 //  Add a new exception, and use the stacktrace list:
                 exceptions.Add(new Bugsnag.Library.Data.Exception()
                 {
@@ -345,12 +297,7 @@ namespace Bugsnag.Library
             byte[] byteArray = Encoding.UTF8.GetBytes(serializedJSON);
 
             //  Post JSON to server:
-            WebRequest request;
-            if(useSSL)
-                request = WebRequest.Create(httpsUrl);
-            else
-                request = WebRequest.Create(httpUrl);
-
+            WebRequest request = useSSL ? WebRequest.Create(httpsUrl) : WebRequest.Create(httpUrl);
             request.Method = WebRequestMethods.Http.Post;
             request.ContentType = "application/json";
             request.ContentLength = byteArray.Length;
@@ -362,5 +309,56 @@ namespace Bugsnag.Library
             //  Get the response.  See https://bugsnag.com/docs/notifier-api for response codes
             var response = request.GetResponse();
         }
+
+        /// <summary>
+        /// Commons the initialize.
+        /// </summary>
+        private void CommonInit()
+        {
+            //  SSL is set to 'off' by default
+            UseSSL = false;
+
+            //  Release stage defaults to 'production'
+            ReleaseStage = "production";
+
+            //  Notify release stages defaults to just notifying 
+            //  for production
+            NotifyReleaseStages = new List<string>();
+            NotifyReleaseStages.Add("production");
+
+            //  CHECK CONFIGURATION SETTINGS
+
+            //  apiKey
+            if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["BugSnagApiKey"]))
+            {
+                APIKey = ConfigurationManager.AppSettings["BugSnagApiKey"];
+            }
+
+            //  SSL
+            if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["BugSnagUseSSL"]))
+            {
+                UseSSL = Convert.ToBoolean(ConfigurationManager.AppSettings["BugSnagUseSSL"]);
+            }
+
+            //  Release stage
+            if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["BugSnagReleaseStage"]))
+            {
+                ReleaseStage = ConfigurationManager.AppSettings["BugSnagReleaseStage"];
+            }
+
+            //  Notify release stages
+            if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["BugSnagNotifyReleaseStages"]))
+            {
+                NotifyReleaseStages.Clear();
+                NotifyReleaseStages.AddRange(ConfigurationManager.AppSettings["BugSnagNotifyReleaseStages"].Split('|'));
+            }
+
+            //  Application version
+            if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["applicationVersion"]))
+            {
+                ApplicationVersion = ConfigurationManager.AppSettings["applicationVersion"];
+            }
+        }
+        #endregion private methods
     }
 }

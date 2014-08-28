@@ -20,22 +20,14 @@ namespace Bugsnag.Library.Data
         /// has generated this error.
         /// </summary>
         [DataMember(Name="apiKey")]
-        public string Api_Key
-        {
-            get;
-            set;
-        }
+        public string Api_Key{get;set;}
 
         /// <summary>
         /// This object describes the notifier itself. These properties are used 
         /// within Bugsnag to track error rates from a notifier.
         /// </summary>
         [DataMember(Name="notifier")]
-        public Notifier NotiferData
-        {
-            get;
-            set;
-        }
+        public Notifier NotiferData{get;set;}
 
         /// <summary>
         /// An array of error events that Bugsnag should be notified of. A notifier
@@ -43,11 +35,7 @@ namespace Bugsnag.Library.Data
         /// can notify Bugsnag each time an event occurs. 
         /// </summary>
         [DataMember(Name = "events")]
-        public List<Event> Events
-        {
-            get;
-            set;
-        }
+        public List<Event> Events{get;set;}
 
     }
 }
