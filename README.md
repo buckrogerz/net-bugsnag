@@ -15,9 +15,7 @@ Install the [NuGet package](https://www.nuget.org/packages/Bugsnag.Library/):
 Install-Package Bugsnag.Library
 ```
 
-Next, you will need to provide .NET BugSnag with your API key.  There is 1 way to do this:
-
-In your application, call
+Next, you will need to provide .NET BugSnag with your API key.  
 
 ```CSharp
 BugSnag bs = new BugSnag()
