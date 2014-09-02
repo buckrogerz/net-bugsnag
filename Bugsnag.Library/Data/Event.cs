@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Bugsnag.Library.Data
 {
@@ -17,39 +13,28 @@ namespace Bugsnag.Library.Data
     {
         public Event()
         {
-            Exceptions = new List<Exception>();
+			this.Exceptions = new List<Exception>();
+			this.User = new UserInfo();
+			this.ApplicationInformation = new AppInfo();
+			this.DeviceInformation = new Device();
+			this.PayloadVersion = "2";
         }
 
-        /// <summary>
-        /// A unique identifier for a user affected by this event. This could be 
-        /// any distinct identifier that makes sense for your application/platform.
-        /// This field is optional but highly recommended.
-        /// </summary>
-        [DataMember(Name = "userId")]
-        public string UserId{get;set;}
+		// The version number of the payload. If not set to 2+, Severity will
+		// not be supported.
+		// (required, must be set to "2")
+		[DataMember(Name = "payloadVersion")]
+		public string PayloadVersion { get; set; }
 
         /// <summary>
-        /// The version number of the application which generated the error.
-        /// (optional, default none)
+		/// An array of exceptions that occurred during this event. Most of the
+		/// time there will only be one exception, but some languages support 
+		/// "nested" or "caused by" exceptions. In this case, exceptions should 
+		/// be unwrapped and added to the array one at a time. The first exception
+		/// raised should be first in this array.
         /// </summary>
-        [DataMember(Name = "appVersion")]
-        public string AppVersion{get;set;}
-
-        /// <summary>
-        /// The operating system version of the client that the error was 
-        /// generated on. (optional, default none)
-        /// </summary>
-        [DataMember(Name = "osVersion")]
-        public string OSVersion{get;set;}
-
-        /// <summary>
-        /// The release stage that this error occurred in, for example 
-        /// "development" or "production". This can be any string, but "production"
-        /// will be highlighted differently in bugsnag in the future, so please use
-        /// "production" appropriately.
-        /// </summary>
-        [DataMember(Name = "releaseStage")]
-        public string ReleaseStage{get;set;}
+		[DataMember(Name = "exceptions")]
+		public List<Exception> Exceptions { get; set; }
 
         /// <summary>
         /// A string representing what was happening in the application at the 
@@ -66,15 +51,37 @@ namespace Bugsnag.Library.Data
         [DataMember(Name = "context")]
         public string Context{get;set;}
 
-        /// <summary>
-        /// An array of exceptions that occurred during this event. Most of the
-        /// time there will only be one exception, but some languages support 
-        /// "nested" or "caused by" exceptions. In this case, exceptions should 
-        /// be unwrapped and added to the array one at a time. The first exception
-        /// raised should be first in this array.
-        /// </summary>
-        [DataMember(Name = "exceptions")]
-        public List<Exception> Exceptions{get;set;}
+		// All errors with the same groupingHash will be grouped together within
+		// the bugsnag dashboard.
+		// This gives a notifier more control as to how grouping should be
+		// performed. We recommend including the errorClass of the exception in
+		// here so a different class of error will be grouped separately.
+		// (optional)
+		[DataMember(Name = "groupingHash")]
+		public string GroupingHash { get; set; }
+
+		// The severity of the error. This can be set to:
+		// - "error"   used when the app crashes
+		// - "warning" used when Bugsnag.notify is called
+		// - "info"    can be used in manual Bugsnag.notify calls
+		// (optional, default "error", filtered)
+		[DataMember(Name = "severity")]
+		public string Severity { get; set; }
+
+		// Information about the user affected by the crash.
+		// These fields are optional but highly recommended.
+		[DataMember(Name = "user")]
+		public UserInfo User { get; set; }
+
+		// Information about the app that crashed.
+		// These fields are optional but highly recommended
+		[DataMember(Name = "app")]
+		public AppInfo ApplicationInformation { get; set; }
+
+		// Information about the computer/device running the app
+		// These fields are optional but highly recommended
+		[DataMember(Name = "device")]
+		public Device DeviceInformation { get; set; }
 
         /// <summary>
         /// An object containing any further data you wish to attach to this error

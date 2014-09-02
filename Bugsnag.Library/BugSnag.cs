@@ -1,364 +1,380 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web;
-using Bugsnag.Library.Data;
-using ServiceStack.Text;
+﻿// --------------------------------------------------------------------------------------------------------------------
+// <copyright file="BugSnag.cs" company="n/a">
+//   2014
+// </copyright>
+// <summary>
+//   
+// </summary>
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace Bugsnag.Library
 {
-    /// <summary>
-    /// .NET notifier for BugSnag error reporting
-    /// </summary>
-    public class BugSnag
-    {
-        #region Local Vars
+	using System.Collections.Generic;
+	using System.IO;
+	using System.Linq;
+	using System.Net;
+	using System.Text;
+	using System.Web;
+	using Data;
+	using ServiceStack.Text;
 
-        /// <summary>
-        /// Http based url for reporting errors to BugSnag
-        /// </summary>
-        private string httpUrl = "http://notify.bugsnag.com";
+	/// <summary>
+	/// .NET notifier for BugSnag error reporting
+	/// </summary>
+	public class BugSnag
+	{
+		#region Constants
 
-        /// <summary>
-        /// Https based url for reporting errors to BugSnag
-        /// </summary>
-        private string httpsUrl = "https://notify.bugsnag.com";
+		/// <summary>
+		/// Http based url for reporting errors to BugSnag
+		/// </summary>
+		private const string HTTPURL = "http://notify.bugsnag.com";
 
-        #endregion Local Vars
+		/// <summary>
+		/// Https based url for reporting errors to BugSnag
+		/// </summary>
+		private const string HTTPSURL = "https://notify.bugsnag.com";
+		#endregion Constants
 
-        #region Constructors
+		#region Constructors
 
-        /// <summary>
-        /// Creates a bugsnag notifier and sets the API key
-        /// </summary>
-        /// <param name="apiKey"></param>
-        public BugSnag(string apiKey) : this()
-        {
-            this.APIKey = apiKey;
-        }
+		/// <summary>
+		/// Initializes a new instance of the <see cref="BugSnag"/> class.
+		/// </summary>
+		/// <param name="apiKey">The API key.</param>
+		public BugSnag(string apiKey) : this()
+		{
+			this.APIKey = apiKey;
+		}
 
-        /// <summary>
-        /// Constructor to set defaults
-        /// </summary>
-        public BugSnag()
-        {
-            CommonInit();
-        }
+		/// <summary>
+		/// Initializes a new instance of the <see cref="BugSnag"/> class.
+		/// </summary>
+		public BugSnag()
+		{
+			this.CommonInit();
+		}
+		#endregion Constructors
 
-        #endregion Constructors
+		#region Properties
 
-        #region Properties
+		/// <summary>
+		/// The APIKey for the project
+		/// </summary>
+		public string APIKey { get; set; }
 
-        /// <summary>
-        /// The apiKey for the project
-        /// </summary>
-        public string APIKey{get;set;}
+		/// <summary>
+		/// The current release stage for the application 
+		/// (development/test/production)
+		/// </summary>
+		public string ReleaseStage { get; set; }
 
-        /// <summary>
-        /// The current release stage for the application 
-        /// (development/test/production)
-        /// </summary>
-        public string ReleaseStage{get;set;}
+		/// <summary>
+		/// If this is true, the plugin should notify Bugsnag using SSL
+		/// </summary>
+		public bool UseSSL { get; set; }
 
-        /// <summary>
-        /// A list of release stages that the notifier will capture and send 
-        /// errors for. If the current release stage is not in this list, errors 
-        /// should not be sent to Bugsnag. 
-        /// </summary>
-        public List<string> NotifyReleaseStages{get;set;}
+		/// <summary>
+		/// The version number of the application which generated the error
+		/// </summary>
+		public string ApplicationVersion { get; set; }
 
-        /// <summary>
-        /// If this is true, the plugin should notify Bugsnag using SSL
-        /// </summary>
-        public bool UseSSL{get;set;}
+		/// <summary>
+		/// The operating system version of the client that the error was 
+		/// generated on.
+		/// </summary>
+		public string OSVersion { get; set; }
+		#endregion Properties
 
-        /// <summary>
-        /// The version number of the application which generated the error
-        /// </summary>
-        public string ApplicationVersion{get;set;}
+		#region public methods
 
-        /// <summary>
-        /// The operating system version of the client that the error was 
-        /// generated on.
-        /// </summary>
-        public string OSVersion{get;set;}
+		/// <summary>
+		/// Gathers information for the last error (if any error is available) 
+		/// and reports it to BugSnag using information from the application
+		/// configuration file and other defaults
+		/// </summary>
+		/// <param name="extraData">Any extra data to pass when reporting this error</param>
+		public void Notify(object extraData = null)
+		{
+			// If we're a web application, we can report errors automagically
+			if (HttpContext.Current != null)
+			{
+				// If we have errors...
+				if (HttpContext.Current.AllErrors != null && HttpContext.Current.AllErrors.Any())
+				{
+					// ... go through all of the errors and report them
+					var events = new List<Event>
+					{
+						this.ProcessExceptions(
+							HttpContext.Current.AllErrors.ToList(), 
+							HttpContext.Current.Request.Path, 
+							string.Empty, 
+							SeverityLevel.Error, 
+							null, 
+							string.Empty, 
+							extraData)
+					};
 
-        #endregion Properties
+					// Send the notification:
+					var notification = new ErrorNotification
+					{
+						Api_Key = this.APIKey, 
+						Events = events
+					};
 
-        #region public methods
-        /// <summary>
-        /// Gathers information for the last error (if any error is available) 
-        /// and reports it to BugSnag using information from the application
-        /// configuration file and other defaults
-        /// </summary>
-        /// <param name="extraData">Any extra data to pass when reporting this error</param>
-        public void Notify(object extraData= null)
-        {
-            //  If we're a web application, we can report errors automagically
-            if(HttpContext.Current != null)
-            {
-                //  If we have errors...
-                if (HttpContext.Current.AllErrors != null && HttpContext.Current.AllErrors.Any())
-                {
-                    //  ... go through all of the errors and report them
-                    List<Event> events = new List<Event>();
-                    events.Add(ProcessExceptions(
-                        HttpContext.Current.AllErrors.ToList(),
-                        HttpContext.Current.Request.Path,
-                        GetDefaultUserId(),
-                        extraData)
-                    );
+					this.SendNotification(notification, this.UseSSL);
+				}
+			}
 
-                    //  Send the notification:
-                    ErrorNotification notification = new ErrorNotification()
-                    {
-                        Api_Key = this.APIKey,
-                        Events = events
-                    };
+			// If we're not a web application, we're SOL ATM (call another method)
+		}
 
-                    SendNotification(notification, this.UseSSL);
-                }
-            }
+		/// <summary>
+		/// Report a single exception to BugSnag using defaults
+		/// </summary>
+		/// <param name="ex">The exception to report</param>
+		/// <param name="extraData">Data that will be sent as meta-data along with this error</param>
+		public void Notify(System.Exception ex, object extraData = null)
+		{
+			this.Notify(ex, string.Empty, string.Empty, SeverityLevel.Error, null, string.Empty, extraData);
+		}
 
-            //  If we're not a web application, we're SOL ATM (call another method)
-        }
+		/// <summary>
+		/// Report a list of exceptions to BugSnag
+		/// </summary>
+		/// <param name="exceptionList">The list of Exceptions to report</param>
+		/// <param name="extraData">Data that will be sent as meta-data along with this error</param>
+		public void Notify(IEnumerable<System.Exception> exceptionList, object extraData = null)
+		{
+			this.Notify(exceptionList, string.Empty, string.Empty, SeverityLevel.Error, null, string.Empty, extraData);
+		}
 
-        /// <summary>
-        /// Report a single exception to BugSnag using defaults
-        /// </summary>
-        /// <param name="ex">The exception to report</param>
-        /// <param name="extraData">Data that will be sent as meta-data along with this error</param>
-        public void Notify(System.Exception ex, object extraData=null) 
-        {
-            Notify(ex, string.Empty, string.Empty, extraData);
-        }
+		/// <summary>
+		/// Notifies the specified ex.
+		/// </summary>
+		/// <param name="ex">The exception to report</param>
+		/// <param name="user">The user.</param>
+		/// <param name="extraData">Data that will be sent as meta-data along with this error</param>
+		public void Notify(System.Exception ex, UserInfo user, object extraData = null)
+		{
+			var exceptionList = new List<System.Exception> { ex };
 
-        /// <summary>
-        /// Report a list of exceptions to BugSnag
-        /// </summary>
-        /// <param name="exList">The list of Exceptions to report</param>
-        /// <param name="extraData">Data that will be sent as meta-data along with this error</param>
-        public void Notify(List<System.Exception> exList, object extraData=null)
-        {
-            Notify(exList, string.Empty, string.Empty, extraData);
-        }
+			this.Notify(exceptionList, string.Empty, string.Empty, SeverityLevel.Error, user, string.Empty, extraData);
+		}
 
-        /// <summary>
-        /// Report an exception to Bugsnag with other per-request or per-session data
-        /// </summary>
-        /// <param name="ex">The exception to report</param>
-        /// <param name="userId">An ID representing the current application's user.  If this isn't set
-        /// this defaults to sessionId if available</param>
-        /// <param name="context">The context that is currently active in the application</param>
-        /// <param name="extraData">Data that will be sent as meta-data along with this error</param>
-        public void Notify(System.Exception ex, string userId, string context, object extraData=null)
-        {
-            List<System.Exception> exList = new List<System.Exception>();
-            exList.Add(ex);
+		/// <summary>
+		/// Notifies the specified ex.
+		/// </summary>
+		/// <param name="ex">The exception to report</param>
+		/// <param name="context">The context.</param>
+		/// <param name="user">The user.</param>
+		/// <param name="extraData">The extra data.</param>
+		public void Notify(System.Exception ex, string context, UserInfo user, object extraData = null)
+		{
+			var exceptionList = new List<System.Exception> { ex };
 
-            Notify(exList, userId, context, extraData);
-        }
+			this.Notify(exceptionList, context, string.Empty, SeverityLevel.Error, user, string.Empty, extraData);
+		}
 
-        /// <summary>
-        /// Report a list of exceptions to Bugsnag with other per-request or per-session data
-        /// </summary>
-        /// <param name="exList">The list of exceptions to report</param>
-        /// <param name="userId">An ID representing the current application's user.  If this isn't set
-        /// this defaults to sessionId if available</param>
-        /// <param name="context">The context that is currently active in the application</param>
-        /// <param name="extraData">Data that will be sent as meta-data along with every error</param>
-        public void Notify(List<System.Exception> exList, string userId, string context, object extraData=null)
-        {
-            //  Add an event for this exception list:
-            List<Event> events = new List<Event>();
-            events.Add(ProcessExceptions(exList, context, userId, extraData));
+		/// <summary>
+		/// Notifies the specified ex.
+		/// </summary>
+		/// <param name="ex">The exception to report</param>
+		/// <param name="context">The context.</param>
+		/// <param name="user">The user.</param>
+		/// <param name="hostName">Name of the host.</param>
+		/// <param name="extraData">The extra data.</param>
+		public void Notify(System.Exception ex, string context, UserInfo user, string hostName, object extraData = null)
+		{
+			var exceptionList = new List<System.Exception> { ex };
 
-            //  Send the notification:
-            ErrorNotification notification = new ErrorNotification()
-            {
-                Api_Key = this.APIKey,
-                Events = events
-            };
+			this.Notify(exceptionList, context, string.Empty, SeverityLevel.Error, user, hostName, extraData);
+		}
 
-            SendNotification(notification, this.UseSSL);
-        }
-        #endregion public methods
+		/// <summary>
+		/// Report an exception to Bugsnag with other per-request or per-session data
+		/// </summary>
+		/// <param name="ex">
+		/// The exception to report
+		/// </param>
+		/// <param name="context">
+		/// The context that is currently active in the application
+		/// </param>
+		/// <param name="groupingStr">
+		/// </param>
+		/// <param name="severity">
+		/// </param>
+		/// <param name="user">
+		/// </param>
+		/// <param name="hostName">
+		/// </param>
+		/// <param name="extraData">
+		/// Data that will be sent as meta-data along with this error
+		/// </param>
+		public void Notify(System.Exception ex, string context, string groupingStr, SeverityLevel severity, UserInfo user, string hostName, object extraData = null)
+		{
+			var exceptionList = new List<System.Exception> { ex };
 
-        #region private methods
-        /// <summary>
-        /// Gets the default UserId to use when reporting errors
-        /// </summary>
-        /// <returns></returns>
-        private string GetDefaultUserId()
-        {
-            string retval = "No UserId Found";
+			this.Notify(exceptionList, context, groupingStr, severity, user, hostName, extraData);
+		}
 
-            //  First, check to see if we have an HttpContext to work with
-            if(HttpContext.Current != null)
-            {
-                //  If we have a current user, use that
-                if(!string.IsNullOrEmpty(HttpContext.Current.User.Identity.Name))
-                {
-                    retval = HttpContext.Current.User.Identity.Name;
-                }
-                else if(HttpContext.Current.Session != null)
-                {
-                    //  Otherwise, use sessionID
-                    retval = HttpContext.Current.Session.SessionID ?? String.Empty;
-                }
-            }
+		/// <summary>
+		/// Report a list of exceptions to Bugsnag with other per-request or per-session data
+		/// </summary>
+		/// <param name="exceptionList">
+		/// The list of exceptions to report
+		/// </param>
+		/// <param name="context">
+		/// The context that is currently active in the application
+		/// </param>
+		/// <param name="groupingStr">
+		/// </param>
+		/// <param name="severity">
+		/// </param>
+		/// <param name="user">
+		/// </param>
+		/// <param name="hostName">
+		/// </param>
+		/// <param name="extraData">
+		/// Data that will be sent as meta-data along with every error
+		/// </param>
+		public void Notify(IEnumerable<System.Exception> exceptionList, string context, string groupingStr, SeverityLevel severity, UserInfo user, string hostName, object extraData = null)
+		{
+			// Add an event for this exception list:
+			var events = new List<Event>();
+			events.Add(this.ProcessExceptions(exceptionList, context, groupingStr, severity, user, hostName, extraData));
 
-            //  If not, we're SOL
-            return retval;
-        }
+			// Send the notification:
+			var notification = new ErrorNotification
+			{
+				Api_Key = this.APIKey, 
+				Events = events
+			};
 
-        /// <summary>
-        /// Process a list of exceptions into an event
-        /// </summary>
-        /// <param name="exList">A list of exceptions</param>
-        /// <param name="Context">The context for the event</param>
-        /// <param name="UserId">The userId for the event</param>
-        /// <param name="ExtraData">Extra data to annotate on the event</param>
-        /// <returns></returns>
-        private Event ProcessExceptions(List<System.Exception> exList, string Context, string UserId, object extraData)
-        {
-            //  Create an event to return
-            Event retval = new Event()
-            {
-                AppVersion = this.ApplicationVersion,
-                Context = Context,
-                OSVersion = this.OSVersion,
-                ReleaseStage = this.ReleaseStage,
-                UserId = UserId,
-                ExtraData = extraData
-            };
+			this.SendNotification(notification, this.UseSSL);
+		}
+		#endregion public methods
 
-            //  Our list of exceptions:
-            List<Bugsnag.Library.Data.Exception> exceptions = new List<Bugsnag.Library.Data.Exception>();
+		#region private methods
 
-            //  For each exception passed...
-            foreach(System.Exception ex in exList)
-            {
-                List<Stacktrace> stacktraces = null;
-                //  ... Create a list of stacktraces
-                //  This may not be the best way to get this information:
-                //  http://blogs.msdn.com/b/jmstall/archive/2005/03/20/399287.aspx
-                if (ex.StackTrace != null && ex.StackTrace != string.Empty)
-                {
-                    stacktraces = (from item in new System.Diagnostics.StackTrace(ex, true).GetFrames()
-                                   select new Stacktrace()
-                                   {
-                                       File = item.GetFileName() ?? item.GetType().Name ?? "N/A",
-                                       LineNumber = item.GetFileLineNumber(),
-                                       Method = item.GetMethod().Name
-                                   }).ToList();
-                }
-                else
-                {
-                    stacktraces = new List<Stacktrace>();
-                    stacktraces.Add(new Stacktrace
-                    {
-                        File = "No file available",
-                        LineNumber = 0,
-                        Method = "No stack trace information available"
-                    });
-                }
-                //  Add a new exception, and use the stacktrace list:
-                exceptions.Add(new Bugsnag.Library.Data.Exception()
-                {
-                    ErrorClass = ex.TargetSite.Name,
-                    Message = ex.Message,
-                    Stacktrace = stacktraces
-                });
-            }
+		/// <summary>
+		/// Process a list of exceptions into an event
+		/// </summary>
+		/// <param name="exceptionList">A list of exceptions</param>
+		/// <param name="context">The context for the event</param>
+		/// <param name="groupingStr"></param>
+		/// <param name="severity"></param>
+		/// <param name="user"></param>
+		/// <param name="hostName"></param>
+		/// <param name="extraData">Extra data to annotate on the event</param>
+		/// <returns>the built event</returns>
+		private Event ProcessExceptions(IEnumerable<System.Exception> exceptionList, string context, string groupingStr, SeverityLevel severity, UserInfo user, string hostName, object extraData)
+		{
+			// Create an event to return
+			var retval = new Event
+			{
+				Context = context, 
+				GroupingHash = groupingStr, 
+				Severity = severity != SeverityLevel.None ? severity.ToString().ToLower() : SeverityLevel.Error.ToString().ToLower(), 
+				User = user ?? new UserInfo(), 
+				ExtraData = extraData, ApplicationInformation = new AppInfo
+				{
+					Version = this.ApplicationVersion,
+					ReleaseStage = this.ReleaseStage
+				}, 
+				DeviceInformation = new Device
+				{
+					OSVersion = this.OSVersion, 
+					HostName = hostName
+				}
+			};
 
-            //  Set our list of exceptions
-            retval.Exceptions = exceptions;
+			// Our list of exceptions:
+			var exceptions = new List<Exception>();
 
-            //  Return the event:
-            return retval;
-        }
+			// For each exception passed...
+			foreach (var ex in exceptionList)
+			{
+				List<Stacktrace> stacktraces;
 
-        /// <summary>
-        /// Sends current set of events to BugSnag via a JSON post
-        /// </summary>
-        /// <param name="notification">The notification to send</param>
-        /// <param name="useSSL">Indicates the post should use SSL when sending JSON data</param>
-        private void SendNotification(ErrorNotification notification, bool useSSL)
-        {
-            string serializedJSON = notification.SerializeToString();
+				// ... Create a list of stacktraces
+				// This may not be the best way to get this information:
+				// http://blogs.msdn.com/b/jmstall/archive/2005/03/20/399287.aspx
+				if (!string.IsNullOrEmpty(ex.StackTrace))
+				{
+					stacktraces = (from item in new System.Diagnostics.StackTrace(ex, true).GetFrames()
+						select new Stacktrace
+						{
+							File = item.GetFileName() ?? item.GetType().Name, 
+							LineNumber = item.GetFileLineNumber(), 
+							Method = item.GetMethod().Name
+						}).ToList();
+				}
+				else
+				{
+					stacktraces = new List<Stacktrace>();
+					stacktraces.Add(new Stacktrace
+					{
+						File = "No file available", 
+						LineNumber = 0, 
+						Method = "No stack trace information available"
+					});
+				}
 
-            //  Create a byte array:
-            byte[] byteArray = Encoding.UTF8.GetBytes(serializedJSON);
+				// Add a new exception, and use the stacktrace list:
+				exceptions.Add(new Exception
+				{
+					ErrorClass = (ex.TargetSite != null && string.IsNullOrEmpty(ex.TargetSite.Name)) ? ex.TargetSite.Name : "Unknown", 
+					Message = ex.Message, 
+					Stacktrace = stacktraces
+				});
+			}
 
-            //  Post JSON to server:
-            WebRequest request = useSSL ? WebRequest.Create(httpsUrl) : WebRequest.Create(httpUrl);
-            request.Method = WebRequestMethods.Http.Post;
-            request.ContentType = "application/json";
-            request.ContentLength = byteArray.Length;
+			// Set our list of exceptions
+			retval.Exceptions = exceptions;
 
-            Stream dataStream = request.GetRequestStream();
-            dataStream.Write(byteArray, 0, byteArray.Length);
-            dataStream.Close();
+			// Return the event:
+			return retval;
+		}
 
-            //  Get the response.  See https://bugsnag.com/docs/notifier-api for response codes
-            var response = request.GetResponse();
-        }
+		/// <summary>
+		/// Sends current set of events to BugSnag via a JSON post
+		/// </summary>
+		/// <param name="notification">The notification to send</param>
+		/// <param name="useSSL">Indicates the post should use SSL when sending JSON data</param>
+		private void SendNotification(ErrorNotification notification, bool useSSL)
+		{
+			string serializedJSON = notification.SerializeToString();
 
-        /// <summary>
-        /// Commons the initialize.
-        /// </summary>
-        private void CommonInit()
-        {
-            //  SSL is set to 'off' by default
-            UseSSL = false;
+			// Create a byte array:
+			byte[] byteArray = Encoding.UTF8.GetBytes(serializedJSON);
 
-            //  Release stage defaults to 'production'
-            ReleaseStage = "production";
+			// Post JSON to server:
+			WebRequest request = useSSL ? WebRequest.Create(HTTPSURL) : WebRequest.Create(HTTPURL);
+			request.Method = WebRequestMethods.Http.Post;
+			request.ContentType = "application/json";
+			request.ContentLength = byteArray.Length;
 
-            //  Notify release stages defaults to just notifying 
-            //  for production
-            NotifyReleaseStages = new List<string>();
-            NotifyReleaseStages.Add("production");
+			Stream dataStream = request.GetRequestStream();
+			dataStream.Write(byteArray, 0, byteArray.Length);
+			dataStream.Close();
 
-            //  CHECK CONFIGURATION SETTINGS
+			// Get the response.  See https://bugsnag.com/docs/notifier-api for response codes
+			// ReSharper disable once UnusedVariable
+			var response = request.GetResponse();
+		}
 
-            //  apiKey
-            if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["BugSnagApiKey"]))
-            {
-                APIKey = ConfigurationManager.AppSettings["BugSnagApiKey"];
-            }
-
-            //  SSL
-            if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["BugSnagUseSSL"]))
-            {
-                UseSSL = Convert.ToBoolean(ConfigurationManager.AppSettings["BugSnagUseSSL"]);
-            }
-
-            //  Release stage
-            if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["BugSnagReleaseStage"]))
-            {
-                ReleaseStage = ConfigurationManager.AppSettings["BugSnagReleaseStage"];
-            }
-
-            //  Notify release stages
-            if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["BugSnagNotifyReleaseStages"]))
-            {
-                NotifyReleaseStages.Clear();
-                NotifyReleaseStages.AddRange(ConfigurationManager.AppSettings["BugSnagNotifyReleaseStages"].Split('|'));
-            }
-
-            //  Application version
-            if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["applicationVersion"]))
-            {
-                ApplicationVersion = ConfigurationManager.AppSettings["applicationVersion"];
-            }
-        }
-        #endregion private methods
-    }
+		/// <summary>
+		/// Commons the initialize.
+		/// </summary>
+		private void CommonInit()
+		{
+			// SSL is set to 'off' by default
+			this.UseSSL = false;
+			this.OSVersion = string.Empty;
+			this.APIKey = string.Empty;
+			this.ApplicationVersion = string.Empty;
+		}
+		#endregion private methods
+	}
 }

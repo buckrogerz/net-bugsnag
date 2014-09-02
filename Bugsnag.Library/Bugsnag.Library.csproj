@@ -49,11 +49,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BugSnag.cs" />
+    <Compile Include="Data\AppInfo.cs" />
+    <Compile Include="Data\Device.cs" />
     <Compile Include="Data\ErrorNotification.cs" />
     <Compile Include="Data\Event.cs" />
     <Compile Include="Data\Exception.cs" />
+    <Compile Include="Data\IUser.cs" />
     <Compile Include="Data\Notifier.cs" />
+    <Compile Include="Data\SeverityLevel.cs" />
     <Compile Include="Data\Stacktrace.cs" />
+    <Compile Include="Data\UserInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

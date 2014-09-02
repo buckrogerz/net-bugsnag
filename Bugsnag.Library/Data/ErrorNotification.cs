@@ -1,41 +1,52 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
+﻿// --------------------------------------------------------------------------------------------------------------------
+// <copyright file="ErrorNotification.cs" company="n/a">
+//   2014
+// </copyright>
+// <summary>
+//   
+// </summary>
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace Bugsnag.Library.Data
 {
-    [DataContract]
+	using System.Collections.Generic;
+	using System.Runtime.Serialization;
+
+	/// <summary>
+	/// class for all data to be submitted to bugsnag
+	/// </summary>
+	[DataContract]
     public class ErrorNotification
     {
-        public ErrorNotification()
+		/// <summary>
+		/// Initializes a new instance of the <see cref="ErrorNotification"/> class.
+		/// </summary>
+		public ErrorNotification()
         {
-            NotiferData = new Notifier();
+			this.NotiferData = new Notifier();
+			this.Events = new List<Event>();
         }
 
         /// <summary>
         /// The API Key associated with the project. Informs Bugsnag which project 
         /// has generated this error.
         /// </summary>
-        [DataMember(Name="apiKey")]
-        public string Api_Key{get;set;}
+        [DataMember(Name = "apiKey")]
+        public string Api_Key { get; set; }
 
-        /// <summary>
+		/// <summary>
         /// This object describes the notifier itself. These properties are used 
         /// within Bugsnag to track error rates from a notifier.
-        /// </summary>
-        [DataMember(Name="notifier")]
-        public Notifier NotiferData{get;set;}
+		/// </summary>
+		[DataMember(Name = "notifier")]
+		public Notifier NotiferData { get; set; }
 
-        /// <summary>
+		/// <summary>
         /// An array of error events that Bugsnag should be notified of. A notifier
         /// can choose to group notices into an array to minimize network traffic, or
         /// can notify Bugsnag each time an event occurs. 
         /// </summary>
-        [DataMember(Name = "events")]
-        public List<Event> Events{get;set;}
-
+		[DataMember(Name = "events")]
+		public List<Event> Events { get; set; }
     }
 }

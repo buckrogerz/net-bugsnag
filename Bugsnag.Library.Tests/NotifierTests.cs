@@ -25,7 +25,7 @@ namespace Bugsnag.Library.Tests
             {
                 BugSnag bs = new BugSnag()
                 {
-                    apiKey = "YOUR_API_KEY"
+					APIKey = "YOUR_API_KEY"
                 };
 
                 bs.Notify(ex, new
