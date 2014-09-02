@@ -3,7 +3,7 @@
 
 .NET Bugsnag is a notifier library for http://bugsnag.com.  It includes support for logging Events, Exceptions, Stacktrace information, and meta information.  
 
-[![Build status](https://ci.appveyor.com/api/projects/status/jncmi5xfno8u99m9)](https://ci.appveyor.com/project/danesparza/net-bugsnag)
+[![Build status](https://ci.appveyor.com/api/projects/status/jncmi5xfno8u99m9)](https://ci.appveyor.com/project/buckrogerz/net-bugsnag)
 
 For more information about the examples below, you can visit https://bugsnag.com/docs/notifier-api for a full reference.
 
@@ -15,17 +15,9 @@ Install the [NuGet package](https://www.nuget.org/packages/Bugsnag.Library/):
 Install-Package Bugsnag.Library
 ```
 
-Next, you will need to provide .NET BugSnag with your API key.  There are 2 ways to do this:  Choose one.
+Next, you will need to provide .NET BugSnag with your API key.  There is 1 way to do this:
 
-a) Add an AppSetting with your api key to your config (this is the easiest way)
-
-```xml
-<appSettings>
-	<add key="BugSnagApiKey" value="[your api key here]" />
-</appSettings>
-```
-
-b) In your application, call
+In your application, call
 
 ```CSharp
 BugSnag bs = new BugSnag()
@@ -74,6 +66,7 @@ catch(SomeSpecificExceptionType ex)
 ### Including extra data
 
 If you'd like to include extra data when you log exceptions, just pass it in the 'extra data' parameter.  It can be a simple object with a few properties, or an incredibly complex set of meta data
+The class you create to store the extra data must be serizable.
 
 ```CSharp
 try
@@ -95,4 +88,4 @@ catch(SomeSpecificExceptionType ex)
 }
 ```
         
-It's just that simple!
+
