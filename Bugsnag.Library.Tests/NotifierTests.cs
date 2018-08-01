@@ -19,6 +19,7 @@ namespace Bugsnag.Library.Tests
 
             try
             {
+                Console.WriteLine("This is a test of the auto notifier");
                 throw new ApplicationException("Throwing an app extension.  You heartless bastard.");
             }
             catch(System.Exception ex)
